@@ -43,17 +43,25 @@
 #define MESH_LINK_TIMEOUT 100
 #define MESH_METRIC 1000
 
+/*
+ * \param interface_id Network interface ID.
+ * \param fhss_uc_dwell_interval default to 250 ms.
+ * \param fhss_broadcast_interval default to 800 ms.
+ * \param fhss_bc_dwell_interval default to 200 ms.
+*/
 #define WS_DEFAULT_REGULATORY_DOMAIN 255
 #define WS_DEFAULT_OPERATING_CLASS 255
 #define WS_DEFAULT_OPERATING_MODE 255
 #define WS_DEFAULT_UC_CHANNEL_FUNCTION 255
 #define WS_DEFAULT_BC_CHANNEL_FUNCTION 255
-#define WS_DEFAULT_UC_DWELL_INTERVAL 0
-#define WS_DEFAULT_BC_INTERVAL 0
-#define WS_DEFAULT_BC_DWELL_INTERVAL 0
+#define WS_DEFAULT_UC_DWELL_INTERVAL 500
+#define WS_DEFAULT_BC_INTERVAL 5000
+#define WS_DEFAULT_BC_DWELL_INTERVAL 100
 #define WS_DEFAULT_UC_FIXED_CHANNEL 0xffff
 #define WS_DEFAULT_BC_FIXED_CHANNEL 0xffff
-
+#define WS_DEFAULT_NETWORK_SIZE 0xffff
+#define WS_DEFAULT_PHY_MODE_ID 255
+#define WS_DEFAULT_CHANNEL_PLAN_ID 255
 static mac_api_t *mac_api;
 static eth_mac_api_t *eth_mac_api;
 
@@ -115,6 +123,9 @@ typedef struct {
     uint8_t bc_dwell_interval;
     uint16_t uc_fixed_channel;
     uint16_t bc_fixed_channel;
+    uint16_t network_size;
+    uint8_t phy_mode_id;
+    uint8_t channel_plan_id;
 } ws_config_t;
 static ws_config_t ws_conf;
 
@@ -232,6 +243,26 @@ void load_config(void)
 #else
     ws_conf.bc_fixed_channel = WS_DEFAULT_BC_FIXED_CHANNEL;
 #endif //MBED_CONF_APP_BC_FIXED_CHANNEL
+#ifdef MBED_CONF_APP_NETWORK_SIZE
+    ws_conf.network_size = MBED_CONF_APP_NETWORK_SIZE;
+#else
+    ws_conf.network_size = WS_DEFAULT_NETWORK_SIZE;
+#endif //MBED_CONF_APP_NETWORK_SIZE
+#ifdef MBED_CONF_APP_NETWORK_SIZE
+    ws_conf.network_size = MBED_CONF_APP_NETWORK_SIZE;
+#else
+    ws_conf.network_size = WS_DEFAULT_NETWORK_SIZE;
+#endif //MBED_CONF_APP_NETWORK_SIZE
+#ifdef MBED_CONF_APP_PHY_MODE_ID
+    ws_conf.phy_mode_id = MBED_CONF_APP_PHY_MODE_ID;
+#else
+    ws_conf.phy_mode_id = WS_DEFAULT_PHY_MODE_ID;
+#endif //MBED_CONF_APP_PHY_MODE_ID
+#ifdef MBED_CONF_APP_CHANNEL_PLAN_ID
+    ws_conf.channel_plan_id = MBED_CONF_APP_CHANNEL_PLAN_ID;
+#else
+    ws_conf.channel_plan_id = WS_DEFAULT_CHANNEL_PLAN_ID;
+#endif //MBED_CONF_APP_CHANNEL_PLAN_ID
 }
 
 void wisun_rf_init()
@@ -311,6 +342,24 @@ static int wisun_interface_up(void)
         ret = ws_management_regulatory_domain_set(ws_br_handler.ws_interface_id, ws_conf.regulatory_domain, ws_conf.operating_class, ws_conf.operating_mode);
         if (ret != 0) {
             tr_error("Regulatory domain configuration failed %"PRIi32"", ret);
+            return -1;
+        }
+    }
+        if (ws_conf.regulatory_domain != WS_DEFAULT_REGULATORY_DOMAIN ||
+            ws_conf.phy_mode_id != WS_DEFAULT_PHY_MODE_ID ||
+            ws_conf.channel_plan_id != WS_DEFAULT_CHANNEL_PLAN_ID) {
+        tr_info("Setting Wi-SUN regulatory information: domain = %d, phy mode id = %d, channel plan id = %d", ws_conf.regulatory_domain, ws_conf.phy_mode_id, ws_conf.channel_plan_id);
+        ret = ws_management_domain_configuration_set(ws_br_handler.ws_interface_id, ws_conf.regulatory_domain, ws_conf.phy_mode_id, ws_conf.channel_plan_id);
+        if (ret != 0) {
+            tr_error("Regulatory domain configuration failed %"PRIi32"", ret);
+            return -1;
+        }
+    }
+    if (ws_conf.network_name != WS_DEFAULT_NETWORK_SIZE) {
+
+        ret = ws_management_network_size_set(ws_br_handler.ws_interface_id, ws_conf.network_size);
+        if (ret != 0) {
+            tr_error("Network size configuration failed %"PRIi32"", ret);
             return -1;
         }
     }
